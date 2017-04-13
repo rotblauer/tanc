@@ -6,10 +6,6 @@ import (
 	"os"
 )
 
-func wopAction(c *cli.Context) error {
-	fmt.Fprintf(c.App.Writer, ":wave: over here, eh\n")
-	return nil
-}
 
 func main() {
 	app := cli.NewApp()
@@ -33,7 +29,7 @@ func main() {
 			Aliases: []string{"vc"},
 			//Category: "compute",
 			Usage:       "compute t-SNE from vcf input ",
-			Description: "compute (t-SNE) from genotypes in vcf file",
+			//Description: "compute (t-SNE) from genotypes in vcf file",
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:        "vcf, f",
@@ -42,20 +38,13 @@ func main() {
 				},
 			},
 			Action: func(c *cli.Context) error {
-				name := "Nefertiti"
-				if c.NArg() > 0 {
-					name = c.Args().Get(0)
-				}
-				if c.String("lang") == "spanish" {
-					fmt.Println("Hola", name)
-				} else {
-					fmt.Println("Hello", vcf)
-				}
+				fmt.Println("using vcf", vcf)
+				fmt.Println("using threads", threads)
+
 				return nil
 			},
 		},
 	}
-
 	app.Run(os.Args)
 
 }
