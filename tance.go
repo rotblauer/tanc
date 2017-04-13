@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+//TODO
+// read vcf to float[][]
+// tsneGO
+// dump results
+// plot?
 
 func main() {
 	app := cli.NewApp()
