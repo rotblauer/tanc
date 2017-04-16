@@ -1,30 +1,38 @@
 package main
 
 import (
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"github.com/brentp/vcfgo"
+	"github.com/rotblauer/goTsne/Utils"
 	"github.com/urfave/cli"
 	"os"
-	"github.com/rotblauer/goTsne/Utils"
 )
 
-func loadData(vcf string, rsIDsFile string) {
-	rsIds :=Utils.LoadRsId(rsIDsFile)
+func loadData(vcf string, idFile string, outDir string) {
+	rsIds := Utils.LoadRsId(idFile)
 	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
 
-	readVCF(vcf, rsIds)
+	readVCF(vcf, rsIds, outDir)
 }
 
-func readVCF(vcf string, rsIds map[string]string) {
+func readVCF(vcf string, rsIds map[string]string, outDir string) {
 	f, _ := os.Open(vcf)
 	r, err := gzip.NewReader(f)
 	rdr, err := vcfgo.NewReader(r, false)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Print("writing to " + outDir + "tance_variants_used.vcf")
+	//o, _ := os.Open()
+	o, err := os.Create(outDir + "tance_variants_used.vcf")
+	w := bufio.NewWriter(o)
+	wtr, err := vcfgo.NewWriter(w, rdr.Header)
+	defer o.Close()
+
 	num := 0
-	numUsed :=0
+	numUsed := 0
 	for {
 		variant := rdr.Read()
 		if variant == nil {
@@ -36,24 +44,21 @@ func readVCF(vcf string, rsIds map[string]string) {
 			fmt.Printf("%d total variants kept\n", numUsed)
 
 		}
-		if _, ok := rsIds[variant.Id_]; ok {
-			//do something here
-			numUsed++;
+		if numUsed+1%100 == 0 {
+			break
 		}
-
-		//fmt.Printf("%s\t%d\t%s\t%s\n", variant.Chromosome, variant.Pos, variant.Ref, variant.Alt)
-
-		//fmt.Print(variant.)
-		//fmt.Printf("%s", variant.Info("DP").(int) > 10)
-		//sample := variant.Samples[0]
-		// we can get the PL field as a list (-1 is default in case of missing value)
-		//fmt.Println("%s", variant.GetGenotypeField(sample, "PL", -1))
-		//_ = sample.DP
+		if _, ok := rsIds[variant.Id_]; ok {
+			wtr.WriteVariant(variant)
+			numUsed++
+		}
 	}
+	w.Flush()
+
 }
 
 //TODO
-// read vcf to float[][]
+// read vcf
+// add genotypes to float to float[][]
 // tsneGO
 // dump results
 // plot?
@@ -65,7 +70,8 @@ func main() {
 	app.Version = "v0.0.1"
 	var threads int
 	var vcf string
-	var rsIDsFile string
+	var idFile string
+	var outDir string
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -89,15 +95,20 @@ func main() {
 					Destination: &vcf,
 				},
 				cli.StringFlag{
-					Name:        "rs-ids, rs",
-					Usage:       "rs-ids `FILE` only variant IDs within this file will be used ",
-					Destination: &rsIDsFile,
+					Name:        "ids, i",
+					Usage:       "idFile `FILE` only variant IDs within this file will be used ",
+					Destination: &idFile,
+				},
+				cli.StringFlag{
+					Name:        "outDir, o",
+					Usage:       "outDir `DIR` output directory ",
+					Destination: &outDir,
 				},
 			},
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
 				fmt.Println("using threads", threads)
-				loadData(vcf, rsIDsFile)
+				loadData(vcf, idFile, outDir)
 				return nil
 			},
 		},
