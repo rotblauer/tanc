@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/brentp/vcfgo"
 	"github.com/rotblauer/goTsne/Utils"
+	"github.com/rotblauer/tsne4go"
 	"github.com/urfave/cli"
 	"os"
 )
@@ -28,14 +29,14 @@ func extractGenotypes(variant *vcfgo.Variant) []float64 {
 
 }
 
-func loadData(vcf string, idFile string, outDir string) {
+func loadData(vcf string, idFile string, outDir string, iter int) {
 	rsIds := Utils.LoadRsId(idFile)
 	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
 
-	readVCF(vcf, rsIds, outDir)
+	run(vcf, rsIds, outDir, iter)
 }
 
-func readVCF(vcf string, rsIds map[string]string, outDir string) {
+func run(vcf string, rsIds map[string]string, outDir string, iter int) {
 	f, _ := os.Open(vcf)
 	r, err := gzip.NewReader(f)
 	rdr, err := vcfgo.NewReader(r, false)
@@ -49,7 +50,6 @@ func readVCF(vcf string, rsIds map[string]string, outDir string) {
 	wtr, err := vcfgo.NewWriter(w, rdr.Header)
 	defer o.Close()
 
-	//v :=tsne4go.VectorDistancer{}
 	var genotypeMatrix [][]float64
 	num := 0
 	numUsed := 0
@@ -72,7 +72,15 @@ func readVCF(vcf string, rsIds map[string]string, outDir string) {
 		}
 	}
 	w.Flush()
-
+	samples := make([]interface{}, len(rdr.Header.SampleNames))
+	for i, v := range rdr.Header.SampleNames {
+		samples[i] = v
+	}
+	tsne := tsne4go.New(Utils.GenotypeDistancer{genotypeMatrix}, samples)
+	for i := 0; i < iter; i++ {
+		tsne.Step()
+		fmt.Println(i)
+	}
 }
 
 //TODO
@@ -91,6 +99,7 @@ func main() {
 	var vcf string
 	var idFile string
 	var outDir string
+	var iter int
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -114,7 +123,7 @@ func main() {
 					Destination: &vcf,
 				},
 				cli.StringFlag{
-					Name:        "ids, i",
+					Name:        "ids",
 					Usage:       "idFile `FILE` only variant IDs within this file will be used ",
 					Destination: &idFile,
 				},
@@ -123,11 +132,17 @@ func main() {
 					Usage:       "outDir `DIR` output directory ",
 					Destination: &outDir,
 				},
+				cli.IntFlag{
+					Name:        "iterations, i",
+					Usage:       "number of iterations for t-SNE `INT` ",
+					Value:       1000,
+					Destination: &iter,
+				},
 			},
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
 				fmt.Println("using threads", threads)
-				loadData(vcf, idFile, outDir)
+				loadData(vcf, idFile, outDir, iter)
 				return nil
 			},
 		},
