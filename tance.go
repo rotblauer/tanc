@@ -9,10 +9,12 @@ import (
 	"github.com/rotblauer/tsne4go"
 	"github.com/urfave/cli"
 	"os"
+	"strconv"
 )
 
-func extractGenotypes(variant *vcfgo.Variant) []float64 {
+func extractGenotypes(variant *vcfgo.Variant, header *vcfgo.Header) []float64 {
 	var s []float64
+	header.ParseSamples(variant)
 	t := variant.Samples
 	for _, gContext := range t {
 		gt := 0
@@ -29,14 +31,14 @@ func extractGenotypes(variant *vcfgo.Variant) []float64 {
 
 }
 
-func loadData(vcf string, idFile string, outDir string, iter int) {
+func loadData(vcf string, idFile string, outDir string, iter int, temp int) {
 	rsIds := Utils.LoadRsId(idFile)
 	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
 
-	run(vcf, rsIds, outDir, iter)
+	run(vcf, rsIds, outDir, iter, temp)
 }
 
-func transpose(a [][]float64)([][]float64) {
+func transpose(a [][]float64) [][]float64 {
 	n := len(a[0])
 	b := make([][]float64, n)
 	for i := 0; i < n; i++ {
@@ -48,10 +50,11 @@ func transpose(a [][]float64)([][]float64) {
 	return b
 }
 
-func run(vcf string, rsIds map[string]string, outDir string, iter int) {
+//http://distill.pub/2016/misread-tsne/
+func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int) {
 	f, _ := os.Open(vcf)
 	r, err := gzip.NewReader(f)
-	rdr, err := vcfgo.NewReader(r, false)
+	rdr, err := vcfgo.NewReader(r, true)
 	if err != nil {
 		panic(err)
 	}
@@ -79,8 +82,7 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int) {
 		if _, ok := rsIds[variant.Id_]; ok {
 			wtr.WriteVariant(variant)
 			numUsed++
-			genotypeMatrix = append(genotypeMatrix, extractGenotypes(variant))
-
+			genotypeMatrix = append(genotypeMatrix, extractGenotypes(variant, rdr.Header))
 		}
 	}
 	w.Flush()
@@ -93,15 +95,18 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int) {
 	for i := 0; i < iter; i++ {
 		tsne.Step()
 		fmt.Println(i)
+		if i%temp == 0 && temp > 0 {
+			dumpCurrent(outDir+"tance_tsne_rep_"+strconv.Itoa(i)+".txt", tsne, rdr)
+
+		}
 	}
 
-	tsneOut, err := os.Create(outDir + "tance_tsne.txt")
+	dumpCurrent(outDir+"tance_tsne_final.txt", tsne, rdr)
+}
+func dumpCurrent(out string, tsne *tsne4go.TSne, rdr *vcfgo.Reader) {
+	tsneOut, err := os.Create(out)
 	wTsne := bufio.NewWriter(tsneOut)
-
 	defer tsneOut.Close()
-	fmt.Println(len(tsne.Solution))
-	fmt.Println(len(rdr.Header.SampleNames))
-
 	for sampIndex, point := range tsne.Solution {
 		_, err = fmt.Fprintf(wTsne, "%s", rdr.Header.SampleNames[sampIndex])
 		check(err)
@@ -119,13 +124,6 @@ func check(err error) {
 	}
 }
 
-//TODO
-// read vcf
-// add genotypes to float to float[][]
-// tsneGO
-// dump results
-// plot?
-
 func main() {
 	app := cli.NewApp()
 	app.Name = "tance"
@@ -136,6 +134,7 @@ func main() {
 	var idFile string
 	var outDir string
 	var iter int
+	var temp int
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -174,11 +173,17 @@ func main() {
 					Value:       5000,
 					Destination: &iter,
 				},
+				cli.IntFlag{
+					Name:        "report, r",
+					Usage:       "number of iterations for temporary solutions `INT` ",
+					Value:       100,
+					Destination: &temp,
+				},
 			},
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
 				fmt.Println("using threads", threads)
-				loadData(vcf, idFile, outDir, iter)
+				loadData(vcf, idFile, outDir, iter, temp)
 				return nil
 			},
 		},
