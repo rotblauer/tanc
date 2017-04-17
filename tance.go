@@ -10,6 +10,24 @@ import (
 	"os"
 )
 
+func extractGenotypes(variant *vcfgo.Variant) []float64 {
+	var s []float64
+	t := variant.Samples
+	for _, gContext := range t {
+		gt := 0
+		for _, aCount := range gContext.GT {
+			gt += aCount
+		}
+		if gt < 0 {
+			fmt.Println(gContext)
+		}
+		s = append(s, float64(gt))
+
+	}
+	return s
+
+}
+
 func loadData(vcf string, idFile string, outDir string) {
 	rsIds := Utils.LoadRsId(idFile)
 	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
@@ -31,6 +49,8 @@ func readVCF(vcf string, rsIds map[string]string, outDir string) {
 	wtr, err := vcfgo.NewWriter(w, rdr.Header)
 	defer o.Close()
 
+	//v :=tsne4go.VectorDistancer{}
+	var genotypeMatrix [][]float64
 	num := 0
 	numUsed := 0
 	for {
@@ -39,17 +59,16 @@ func readVCF(vcf string, rsIds map[string]string, outDir string) {
 			break
 		}
 		num++
-		if num%1000 == 0 {
+		if num%10000 == 0 {
 			fmt.Printf("%d total variants scanned\n", num)
 			fmt.Printf("%d total variants kept\n", numUsed)
 
 		}
-		if numUsed+1%100 == 0 {
-			break
-		}
 		if _, ok := rsIds[variant.Id_]; ok {
 			wtr.WriteVariant(variant)
 			numUsed++
+			genotypeMatrix = append(genotypeMatrix, extractGenotypes(variant))
+
 		}
 	}
 	w.Flush()

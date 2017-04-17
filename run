@@ -1,3 +1,8 @@
-go run tance.go vc --vcf /Users/Kitty/temp/1000g/ALL.chr20.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -i /Users/Kitty/Go/src/github.com/rotblauer/goTsne/ext/aims.txt -o /Users/Kitty/temp/1000g/
+#go run tance.go vc --vcf /Users/Kitty/temp/1000g/ALL.chr20.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz -i /Users/Kitty/Go/src/github.com/rotblauer/goTsne/ext/aims.txt -o /Users/Kitty/temp/1000g/
+
+go run tance.go vc --vcf /Users/Kitty/temp/1000g/tance_variants_used_2.vcf.gz -i /Users/Kitty/Go/src/github.com/rotblauer/goTsne/ext/aims.txt -o /Users/Kitty/temp/1000g/
+
+#/Users/Kitty/temp/1000g/tance_variants_used.vcf
+
 
  
