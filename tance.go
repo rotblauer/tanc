@@ -171,7 +171,7 @@ func main() {
 				cli.IntFlag{
 					Name:        "iterations, i",
 					Usage:       "number of iterations for t-SNE `INT` ",
-					Value:       1000,
+					Value:       5000,
 					Destination: &iter,
 				},
 			},
