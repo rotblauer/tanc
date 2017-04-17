@@ -36,6 +36,18 @@ func loadData(vcf string, idFile string, outDir string, iter int) {
 	run(vcf, rsIds, outDir, iter)
 }
 
+func transpose(a [][]float64)([][]float64) {
+	n := len(a[0])
+	b := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		b[i] = make([]float64, len(a))
+		for j := 0; j < len(a); j++ {
+			b[i][j] = a[j][i]
+		}
+	}
+	return b
+}
+
 func run(vcf string, rsIds map[string]string, outDir string, iter int) {
 	f, _ := os.Open(vcf)
 	r, err := gzip.NewReader(f)
@@ -76,10 +88,34 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int) {
 	for i, v := range rdr.Header.SampleNames {
 		samples[i] = v
 	}
-	tsne := tsne4go.New(Utils.GenotypeDistancer{genotypeMatrix}, samples)
+
+	tsne := tsne4go.New(Utils.GenotypeDistancer{transpose(genotypeMatrix)}, samples)
 	for i := 0; i < iter; i++ {
 		tsne.Step()
 		fmt.Println(i)
+	}
+
+	tsneOut, err := os.Create(outDir + "tance_tsne.txt")
+	wTsne := bufio.NewWriter(tsneOut)
+
+	defer tsneOut.Close()
+	fmt.Println(len(tsne.Solution))
+	fmt.Println(len(rdr.Header.SampleNames))
+
+	for sampIndex, point := range tsne.Solution {
+		_, err = fmt.Fprintf(wTsne, "%s", rdr.Header.SampleNames[sampIndex])
+		check(err)
+		for _, coord := range point {
+			fmt.Fprint(wTsne, "\t")
+			fmt.Fprint(wTsne, coord)
+		}
+		fmt.Fprint(wTsne, "\n")
+	}
+	wTsne.Flush()
+}
+func check(err error) {
+	if err != nil {
+		panic(err)
 	}
 }
 
