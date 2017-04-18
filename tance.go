@@ -170,13 +170,13 @@ func main() {
 				cli.IntFlag{
 					Name:        "iterations, i",
 					Usage:       "number of iterations for t-SNE `INT` ",
-					Value:       5000,
+					Value:       20000,
 					Destination: &iter,
 				},
 				cli.IntFlag{
 					Name:        "report, r",
 					Usage:       "number of iterations for temporary solutions `INT` ",
-					Value:       100,
+					Value:       200,
 					Destination: &temp,
 				},
 			},

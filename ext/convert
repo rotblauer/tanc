@@ -1,0 +1,2 @@
+convert -delay 80 -loop 0 super*.png super.gif
+convert -delay 80 -loop 0 population*.png population.gif
