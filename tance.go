@@ -31,11 +31,11 @@ func extractGenotypes(variant *vcfgo.Variant, header *vcfgo.Header) []float64 {
 
 }
 
-func loadData(vcf string, idFile string, outDir string, iter int, temp int) {
+func loadData(vcf string, idFile string, outDir string, iter int, temp int, perplexity float64, epsilon float64) {
 	rsIds := Utils.LoadRsId(idFile)
 	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
 
-	run(vcf, rsIds, outDir, iter, temp)
+	run(vcf, rsIds, outDir, iter, temp, perplexity, epsilon)
 }
 
 func transpose(a [][]float64) [][]float64 {
@@ -51,7 +51,7 @@ func transpose(a [][]float64) [][]float64 {
 }
 
 //http://distill.pub/2016/misread-tsne/
-func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int) {
+func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int, perplexity float64, epsilon float64) {
 	f, _ := os.Open(vcf)
 	r, err := gzip.NewReader(f)
 	rdr, err := vcfgo.NewReader(r, true)
@@ -91,9 +91,9 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int)
 		samples[i] = v
 	}
 
-	tsne := tsne4go.New(Utils.GenotypeDistancer{transpose(genotypeMatrix)}, samples)
+	tsne := tsne4go.New(Utils.GenotypeDistancer{Matrix: transpose(genotypeMatrix)}, samples, perplexity, tsne4go.ToleranceDefault)
 	for i := 0; i < iter; i++ {
-		tsne.Step()
+		tsne.Step(epsilon)
 		fmt.Println(i)
 		if i%temp == 0 && temp > 0 {
 			dumpCurrent(outDir+"tance_tsne_rep_"+strconv.Itoa(i)+".txt", tsne, rdr)
@@ -135,6 +135,8 @@ func main() {
 	var outDir string
 	var iter int
 	var temp int
+	var perplexity float64
+	var epsilon float64
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -145,7 +147,7 @@ func main() {
 		},
 	}
 	app.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name:    "vcf-compute",
 			Aliases: []string{"vc"},
 			//Category: "compute",
@@ -179,11 +181,23 @@ func main() {
 					Value:       200,
 					Destination: &temp,
 				},
+				cli.Float64Flag{
+					Name:        "perplexity, p",
+					Usage:       "The performance of SNE is fairly robust to changes in the perplexity, and typical values are between 5 and 50. `FLOAT` ",
+					Value:       tsne4go.PerplexityDefault,
+					Destination: &perplexity,
+				},
+				cli.Float64Flag{
+					Name:        "epsilon, e",
+					Usage:       "A learning rate (often called “epsilon”)  `FLOAT` ",
+					Value:       tsne4go.EpsilonDefault,
+					Destination: &epsilon,
+				},
 			},
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
 				fmt.Println("using threads", threads)
-				loadData(vcf, idFile, outDir, iter, temp)
+				loadData(vcf, idFile, outDir, iter, temp, perplexity, epsilon)
 				return nil
 			},
 		},
