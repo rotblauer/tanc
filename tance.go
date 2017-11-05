@@ -67,7 +67,7 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int,
 		panic(err)
 	}
 	fmt.Println("writing to " + outDir + "tance_variants_used.vcf.gz")
-	//o, _ := os.Open()
+
 	os.MkdirAll(outDir, os.ModePerm)
 	o, err := os.Create(outDir + "tance_variants_used.vcf.gz")
 
@@ -95,7 +95,7 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int,
 			genotypeMatrix = append(genotypeMatrix, extractGenotypes(variant, rdr.Header))
 		}
 	}
-	w.Flush()
+	bgzfw.Flush()
 	samples := make([]interface{}, len(rdr.Header.SampleNames))
 	for i, v := range rdr.Header.SampleNames {
 		samples[i] = v
