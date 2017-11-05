@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
+	"github.com/biogo/hts/bgzf"
 )
 
 func extractGenotypes(variant *vcfgo.Variant, header *vcfgo.Header) []float64 {
@@ -31,11 +32,17 @@ func extractGenotypes(variant *vcfgo.Variant, header *vcfgo.Header) []float64 {
 
 }
 
-func loadData(vcf string, idFile string, outDir string, iter int, temp int, perplexity float64, epsilon float64) {
-	rsIds := Utils.LoadRsId(idFile)
-	fmt.Printf("%d total rsIds loaded\n", len(rsIds))
+func loadData(vcf string, idFile string, outDir string, limit bool, iter int, temp int, perplexity float64, epsilon float64) {
+	if limit {
 
-	run(vcf, rsIds, outDir, iter, temp, perplexity, epsilon)
+		rsIds := Utils.LoadRsId(idFile)
+		fmt.Printf("%d total rsIds loaded\n", len(rsIds))
+
+		run(vcf, rsIds, outDir, iter, temp, perplexity, epsilon)
+	} else {
+		run(vcf, make(map[string]string), outDir, iter, temp, perplexity, epsilon)
+
+	}
 }
 
 func transpose(a [][]float64) [][]float64 {
@@ -53,16 +60,19 @@ func transpose(a [][]float64) [][]float64 {
 //http://distill.pub/2016/misread-tsne/
 func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int, perplexity float64, epsilon float64) {
 	f, _ := os.Open(vcf)
+	//TODO non-gzip based on ext
 	r, err := gzip.NewReader(f)
 	rdr, err := vcfgo.NewReader(r, true)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Print("writing to " + outDir + "tance_variants_used.vcf")
+	fmt.Println("writing to " + outDir + "tance_variants_used.vcf.gz")
 	//o, _ := os.Open()
-	o, err := os.Create(outDir + "tance_variants_used.vcf")
-	w := bufio.NewWriter(o)
-	wtr, err := vcfgo.NewWriter(w, rdr.Header)
+	os.MkdirAll(outDir, os.ModePerm)
+	o, err := os.Create(outDir + "tance_variants_used.vcf.gz")
+
+	bgzfw :=bgzf.NewWriter(bufio.NewWriter(o),2)
+	wtr, err := vcfgo.NewWriter(bgzfw, rdr.Header)
 	defer o.Close()
 
 	var genotypeMatrix [][]float64
@@ -137,6 +147,7 @@ func main() {
 	var temp int
 	var perplexity float64
 	var epsilon float64
+	var limit bool = false
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
@@ -161,7 +172,7 @@ func main() {
 				},
 				cli.StringFlag{
 					Name:        "ids",
-					Usage:       "idFile `FILE` only variant IDs within this file will be used ",
+					Usage:       "idFile `FILE` only variant IDs within this file will be used. If not supplied, no input filtering will occur ",
 					Destination: &idFile,
 				},
 				cli.StringFlag{
@@ -197,7 +208,13 @@ func main() {
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
 				fmt.Println("using threads", threads)
-				loadData(vcf, idFile, outDir, iter, temp, perplexity, epsilon)
+				if idFile != "" {
+					fmt.Println("using limiting ID file", idFile)
+					limit = true
+
+				}
+
+				loadData(vcf, idFile, outDir, limit, iter, temp, perplexity, epsilon)
 				return nil
 			},
 		},
