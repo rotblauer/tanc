@@ -61,19 +61,22 @@ func transpose(a [][]float64) [][]float64 {
 func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int, perplexity float64, epsilon float64) {
 	f, _ := os.Open(vcf)
 	//TODO non-gzip based on ext
+	//TODO root based output
 	r, err := gzip.NewReader(f)
 	rdr, err := vcfgo.NewReader(r, true)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("writing to " + outDir + "tance_variants_used.vcf.gz")
+	outVCF := outDir + "tance_variants_used.vcf.gz"
+	fmt.Println("writing variants used to " + outVCF)
 
 	os.MkdirAll(outDir, os.ModePerm)
-	o, err := os.Create(outDir + "tance_variants_used.vcf.gz")
+	o, err := os.Create(outVCF)
 
-	bgzfw := bgzf.NewWriter(bufio.NewWriter(o), 2)
+	bgzfw := bgzf.NewWriter(bufio.NewWriter(o), 4)
 	wtr, err := vcfgo.NewWriter(bgzfw, rdr.Header)
 	defer o.Close()
+	defer bgzfw.Flush()
 
 	var genotypeMatrix [][]float64
 	num := 0
@@ -83,19 +86,19 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int,
 		if variant == nil {
 			break
 		}
-		num++
 		if num%10000 == 0 {
 			fmt.Printf("%d total variants scanned\n", num)
 			fmt.Printf("%d total variants kept\n", numUsed)
 
 		}
-		if _, ok := rsIds[variant.Id_]; ok {
+		if _, ok := rsIds[variant.Id()]; ok || len(rsIds) == 0 {
 			wtr.WriteVariant(variant)
 			numUsed++
 			genotypeMatrix = append(genotypeMatrix, extractGenotypes(variant, rdr.Header))
 		}
+		num++
+
 	}
-	bgzfw.Flush()
 	samples := make([]interface{}, len(rdr.Header.SampleNames))
 	for i, v := range rdr.Header.SampleNames {
 		samples[i] = v
@@ -139,7 +142,6 @@ func main() {
 	app.Name = "tance"
 	app.Usage = "Generates t-Distributed Stochastic Neighbor Embedding (t-SNE) from genotype data"
 	app.Version = "v0.0.1"
-	var threads int
 	var vcf string
 	var idFile string
 	var outDir string
@@ -147,14 +149,14 @@ func main() {
 	var temp int
 	var perplexity float64
 	var epsilon float64
-	var limit bool = false
+	var limit = false
 
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
-			Name:        "threads, t",
-			Usage:       "number of threads to use `INT` ",
-			Value:       4,
-			Destination: &threads,
+			Name:   "threads, t",
+			Usage:  "number of threads to use `INT` ",
+			Value:  4,
+			EnvVar: "GOMAXPROCS",
 		},
 	}
 	app.Commands = []cli.Command{
@@ -183,13 +185,13 @@ func main() {
 				cli.IntFlag{
 					Name:        "iterations, i",
 					Usage:       "number of iterations for t-SNE `INT` ",
-					Value:       20000,
+					Value:       10000,
 					Destination: &iter,
 				},
 				cli.IntFlag{
 					Name:        "report, r",
 					Usage:       "number of iterations for temporary solutions `INT` ",
-					Value:       200,
+					Value:       1000,
 					Destination: &temp,
 				},
 				cli.Float64Flag{
@@ -207,7 +209,6 @@ func main() {
 			},
 			Action: func(c *cli.Context) error {
 				fmt.Println("using vcf", vcf)
-				fmt.Println("using threads", threads)
 				if idFile != "" {
 					fmt.Println("using limiting ID file", idFile)
 					limit = true
