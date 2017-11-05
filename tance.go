@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"compress/gzip"
 	"fmt"
+	"github.com/biogo/hts/bgzf"
 	"github.com/brentp/vcfgo"
 	"github.com/rotblauer/goTsne/Utils"
 	"github.com/rotblauer/tsne4go"
 	"github.com/urfave/cli"
 	"os"
 	"strconv"
-	"github.com/biogo/hts/bgzf"
 )
 
 func extractGenotypes(variant *vcfgo.Variant, header *vcfgo.Header) []float64 {
@@ -71,7 +71,7 @@ func run(vcf string, rsIds map[string]string, outDir string, iter int, temp int,
 	os.MkdirAll(outDir, os.ModePerm)
 	o, err := os.Create(outDir + "tance_variants_used.vcf.gz")
 
-	bgzfw :=bgzf.NewWriter(bufio.NewWriter(o),2)
+	bgzfw := bgzf.NewWriter(bufio.NewWriter(o), 2)
 	wtr, err := vcfgo.NewWriter(bgzfw, rdr.Header)
 	defer o.Close()
 
