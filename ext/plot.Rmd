@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup,fig.width=10,fig.height=8}
 
+
 library("ggplot2")
 
 theme_set(theme_bw(20))
@@ -15,25 +16,26 @@ files <-
   list.files(".",
              pattern = glob2rx("tance_tsne_rep*.txt"),
              full = TRUE)
-files =files[order(as.numeric(gsub('\\D+|\\.txt.*', '', files)))]
+files = files[order(as.numeric(gsub('\\D+|\\.txt.*', '', files)))]
 
 
-png(file="super%03d.png", width=600, height=600)
-    
-for (file in files){ 
-  
+png(file = "super%03d.png",
+    width = 600,
+    height = 600)
+
+for (file in files) {
   tsne = read.delim(file, stringsAsFactors = FALSE, header = FALSE)
   ped = read.delim(
-  "./20130606_g1k.ped",
-  sep = "\t",
-  header = TRUE,
-  row.names = 2
+    "./20130606_g1k.ped",
+    sep = "\t",
+    header = TRUE,
+    row.names = 2
   )[tsne$V1, 6, drop = FALSE]
   
   pop = read.table("./20131219.populations.tsv",
-  sep = "\t",
-  header = TRUE)
-  pop = pop[1:26, ]
+                   sep = "\t",
+                   header = TRUE)
+  pop = pop[1:26,]
   super = pop[, 3]
   names(super) = pop[, 2]
   super = factor(super)
@@ -42,28 +44,31 @@ for (file in files){
   popMerge = merge(tsne, ped, by.x = "V1", by.y = "row.names")
   
   
-  print(ggplot(popMerge, aes(x = V2, color = Superpopulation)) +
-  geom_point(aes(y = V3))+ylab("tSNE1")+xlab("tSNE2") +labs(title = basename(file)))
+  print(
+    ggplot(popMerge, aes(x = V2, color = Superpopulation)) +
+      geom_point(aes(y = V3)) + ylab("tSNE1") + xlab("tSNE2") + labs(title = basename(file))
+  )
 }
 dev.off()
 
 
-png(file="population%03d.png", width=600, height=600)
-    
-for (file in files){ 
-  
+png(file = "population%03d.png",
+    width = 600,
+    height = 600)
+
+for (file in files) {
   tsne = read.delim(file, stringsAsFactors = FALSE, header = FALSE)
   ped = read.delim(
-  "./20130606_g1k.ped",
-  sep = "\t",
-  header = TRUE,
-  row.names = 2
+    "./20130606_g1k.ped",
+    sep = "\t",
+    header = TRUE,
+    row.names = 2
   )[tsne$V1, 6, drop = FALSE]
   
   pop = read.table("./20131219.populations.tsv",
-  sep = "\t",
-  header = TRUE)
-  pop = pop[1:26, ]
+                   sep = "\t",
+                   header = TRUE)
+  pop = pop[1:26,]
   super = pop[, 3]
   names(super) = pop[, 2]
   super = factor(super)
@@ -72,9 +77,11 @@ for (file in files){
   popMerge = merge(tsne, ped, by.x = "V1", by.y = "row.names")
   
   
-  print(ggplot(popMerge, aes(x = V2, color = Population)) +
-  geom_point(aes(y = V3))+ylab("tSNE1")+xlab("tSNE2") +labs(title = basename(file)))
- 
+  print(
+    ggplot(popMerge, aes(x = V2, color = Population)) +
+      geom_point(aes(y = V3)) + ylab("tSNE1") + xlab("tSNE2") + labs(title = basename(file))
+  )
+  
 }
 dev.off()
 

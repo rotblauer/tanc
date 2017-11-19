@@ -64,18 +64,18 @@ func run(vcf string, rsIds map[string]string, outputRoot string, iter int, temp 
 	//TODO non-gzip based on ext
 	//TODO log
 
-	r, err := gzip.NewReader(f)
-	rdr, err := vcfgo.NewReader(r, true)
-	if err != nil {
-		panic(err)
-	}
+
 	outVCF := outputRoot + "tance_variants_used.vcf.gz"
 	outFile := outputRoot + "tance_tsne_final.txt"
 	fmt.Println("output root ", filepath.Dir(outputRoot))
 	fmt.Println("writing variants used to " + outVCF)
 
 	if !Utils.Exists(outFile) {
-
+		r, err := gzip.NewReader(f)
+		rdr, err := vcfgo.NewReader(r, true)
+		if err != nil {
+			panic(err)
+		}
 		os.MkdirAll(filepath.Dir(outputRoot), os.ModePerm)
 		o, err := os.Create(outVCF)
 		if err != nil {
