@@ -64,7 +64,6 @@ func run(vcf string, rsIds map[string]string, outputRoot string, iter int, temp 
 	//TODO non-gzip based on ext
 	//TODO log
 
-
 	outVCF := outputRoot + "tance_variants_used.vcf.gz"
 	outFile := outputRoot + "tance_tsne_final.txt"
 	fmt.Println("output root ", filepath.Dir(outputRoot))
